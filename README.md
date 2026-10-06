@@ -93,7 +93,7 @@ docker build -t pr-concierge .
 docker run -p 3000:3000 -e APP_ID=... -e PRIVATE_KEY="$(cat private-key.pem)" -e WEBHOOK_SECRET=... pr-concierge
 ```
 
-After deploying, go to your app's settings on GitHub and set **Webhook URL** to `https://<your-host>/api/github/webhooks`. Don't set `WEBHOOK_PROXY_URL` in production. `GET /health` returns `{"status":"ok"}` for uptime checks.
+After deploying, go to your app's settings on GitHub and set **Webhook URL** to `https://<your-host>/api/github/webhooks`. Don't set `WEBHOOK_PROXY_URL` in production. `GET /` serves the product page and `GET /health` returns `{"status":"ok"}` for uptime checks.
 
 | Variable                  | Required | Description                                                  |
 | ------------------------- | -------- | ------------------------------------------------------------ |
@@ -122,7 +122,8 @@ npm run build     # compiles to dist/
 | `src/reminders.ts`  | Stale review reminders across all installations           |
 | `src/http.ts`, `src/server.ts` | HTTP server, smee relay, reminder scheduler    |
 | `src/setup.ts`      | One-click registration via the GitHub App manifest flow   |
+| `src/landing.ts`    | Product page served at `/` (plain HTML and CSS)           |
 
 ## Support
 
-Questions or bugs: open an issue, or email **bjaymakara@gmail.com** <!-- TODO: replace with your support address -->.
+Questions or bugs: open an issue, or email **bjaymakara@gmail.com**.
