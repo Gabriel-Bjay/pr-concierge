@@ -3,6 +3,7 @@ import { createServer, type Server, type ServerResponse } from "node:http";
 import { createNodeMiddleware } from "@octokit/webhooks";
 import type { App } from "octokit";
 import { WEBHOOK_PATH } from "./github-app.js";
+import { LANDING_PAGE } from "./landing.js";
 import { remindStaleReviews } from "./reminders.js";
 
 export const REMIND_PATH = "/cron/remind";
@@ -12,15 +13,23 @@ export interface HttpOptions {
   cronSecret?: string;
 }
 
-/** HTTP server that verifies and dispatches webhooks, plus a health check for hosting platforms. */
+/** HTTP server that verifies and dispatches webhooks, and serves the product page and a health check. */
 export function createHttpServer(app: App, { cronSecret }: HttpOptions = {}): Server {
   const handleWebhook = createNodeMiddleware(app.webhooks, { path: WEBHOOK_PATH });
 
   return createServer(async (request, response) => {
     if (await handleWebhook(request, response)) return;
     const { pathname } = new URL(request.url ?? "/", "http://localhost");
+    const isRead = request.method === "GET" || request.method === "HEAD";
 
-    if (request.method === "GET" && (pathname === "/" || pathname === "/health")) {
+    if (isRead && pathname === "/") {
+      response
+        .writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" })
+        .end(LANDING_PAGE);
+      return;
+    }
+
+    if (isRead && pathname === "/health") {
       sendJson(response, 200, { status: "ok" });
       return;
     }

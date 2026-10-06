@@ -186,6 +186,24 @@ describe("pull_request webhooks", () => {
   });
 });
 
+describe("pages", () => {
+  it("serves the product page at / and a JSON health check at /health", async () => {
+    const { url, calls } = await startServer({});
+
+    const page = await fetch(url);
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    const html = await page.text();
+    expect(html).toContain("<title>PR Concierge</title>");
+    expect(html).toContain('href="mailto:');
+
+    const health = await fetch(`${url}/health`);
+    expect(await health.json()).toEqual({ status: "ok" });
+    expect((await fetch(`${url}/nope`)).status).toBe(404);
+    expect(calls).toEqual([]);
+  });
+});
+
 describe("cron endpoint", () => {
   it("does not exist unless a cron secret is configured", async () => {
     const { url } = await startServer({});
