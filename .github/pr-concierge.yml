@@ -1,0 +1,31 @@
+# PR Concierge configuration. Every key is optional; these are the defaults.
+# Put this file at .github/pr-concierge.yml on a repository's default branch.
+
+size:
+  enabled: true
+  # Exclusive upper bounds on changed lines (additions + deletions). At or above `l` is XL.
+  thresholds:
+    xs: 10
+    s: 30
+    m: 100
+    l: 500
+  # Files that don't count toward size (glob patterns).
+  ignore:
+    - "**/package-lock.json"
+    - "**/pnpm-lock.yaml"
+    - "**/*.lock"
+    - "**/go.sum"
+    - "**/*.min.js"
+    - "**/*.snap"
+
+checks:
+  enabled: true
+  minDescriptionLength: 20
+  requireLinkedIssue: true
+  # Don't post checklists on PRs opened by bots such as Dependabot.
+  skipBots: true
+
+reminders:
+  enabled: true
+  # Nudge pending reviewers after this many days without activity on the PR.
+  staleAfterDays: 3
