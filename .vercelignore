@@ -1,0 +1,4 @@
+# Never upload local credentials to Vercel.
+.env
+.env.*
+*.pem

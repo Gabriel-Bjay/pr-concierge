@@ -47,7 +47,8 @@ Subscribed event: `pull_request` (opened, reopened, synchronize, edited, ready_f
 
 Reminders run on a schedule, not on webhooks. Choose one:
 
-- **In the server process**: set `REMINDER_INTERVAL_HOURS=24`.
+- **On Vercel**: set `CRON_SECRET`. [`vercel.json`](vercel.json) schedules `GET /cron/remind` on weekdays around 09:00 UTC.
+- **In a long-running server process**: set `REMINDER_INTERVAL_HOURS=24`.
 - **From cron or a scheduled workflow**: run `npm run remind`. For example, in a scheduled GitHub Actions workflow:
 
   ```yaml
@@ -72,14 +73,27 @@ A reminder counts as activity on the PR, so each PR is nudged at most once per s
 
 ## Deploying
 
-Any host that runs Node or Docker works, for example Render, Fly.io, Railway or a VPS.
+### Vercel (free Hobby plan)
+
+Vercel runs `src/server.ts` as a serverless function, so no code changes are needed.
+
+```bash
+npx vercel link
+npx vercel env add APP_ID production
+npx vercel env add PRIVATE_KEY production < private-key.pem
+npx vercel env add WEBHOOK_SECRET production
+npx vercel env add CRON_SECRET production
+npx vercel deploy --prod
+```
+
+### Docker (any host)
 
 ```bash
 docker build -t pr-concierge .
 docker run -p 3000:3000 -e APP_ID=... -e PRIVATE_KEY="$(cat private-key.pem)" -e WEBHOOK_SECRET=... pr-concierge
 ```
 
-Then, in your app's settings on GitHub, set **Webhook URL** to `https://<your-host>/api/github/webhooks`. Don't set `WEBHOOK_PROXY_URL` in production. `GET /health` returns `{"status":"ok"}` for uptime checks.
+After deploying, go to your app's settings on GitHub and set **Webhook URL** to `https://<your-host>/api/github/webhooks`. Don't set `WEBHOOK_PROXY_URL` in production. `GET /health` returns `{"status":"ok"}` for uptime checks.
 
 | Variable                  | Required | Description                                                  |
 | ------------------------- | -------- | ------------------------------------------------------------ |
@@ -87,7 +101,8 @@ Then, in your app's settings on GitHub, set **Webhook URL** to `https://<your-ho
 | `PRIVATE_KEY` or `PRIVATE_KEY_PATH` | yes | App private key (inline with `\n`, or a file path)   |
 | `WEBHOOK_SECRET`          | yes      | Secret used to verify webhook signatures                     |
 | `PORT`                    | no       | HTTP port (default `3000`)                                   |
-| `REMINDER_INTERVAL_HOURS` | no       | Run reminders every N hours (default off)                    |
+| `REMINDER_INTERVAL_HOURS` | no       | Run reminders every N hours in-process (default off)         |
+| `CRON_SECRET`             | no       | Enables `GET /cron/remind`, authorized with `Bearer <secret>` |
 | `WEBHOOK_PROXY_URL`       | dev only | smee.io channel to relay webhooks locally                    |
 | `GITHUB_API_URL`          | no       | GitHub Enterprise Server API, e.g. `https://ghe.example.com/api/v3` |
 
@@ -101,7 +116,7 @@ npm run build     # compiles to dist/
 
 | Path                | What's there                                              |
 | ------------------- | --------------------------------------------------------- |
-| `src/app.ts`        | Builds the GitHub App and wires webhook events            |
+| `src/github-app.ts` | Builds the GitHub App and wires webhook events            |
 | `src/review.ts`     | Size labelling and checklist comment (GitHub API calls)   |
 | `src/size.ts`, `src/checks.ts`, `src/config.ts` | Pure logic: sizing, checks, config merging |
 | `src/reminders.ts`  | Stale review reminders across all installations           |

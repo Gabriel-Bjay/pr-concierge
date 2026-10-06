@@ -2,3 +2,7 @@ node_modules/
 dist/
 .env
 *.pem
+
+.vercel
+.env*
+!.env.example

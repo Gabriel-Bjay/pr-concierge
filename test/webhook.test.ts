@@ -4,9 +4,9 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Octokit } from "octokit";
 import { afterEach, describe, expect, it } from "vitest";
-import { createApp, WEBHOOK_PATH } from "../src/app.js";
+import { createApp, WEBHOOK_PATH } from "../src/github-app.js";
 import { CHECKLIST_MARKER } from "../src/checks.js";
-import { createHttpServer } from "../src/http.js";
+import { createHttpServer, REMIND_PATH, type HttpOptions } from "../src/http.js";
 
 const SECRET = "webhook-secret";
 const { privateKey } = generateKeyPairSync("rsa", {
@@ -80,15 +80,19 @@ function pullRequestEvent(pull: object) {
 let server: Server | undefined;
 afterEach(() => server?.close());
 
-async function deliver(routes: Routes, payload: object, secret = SECRET) {
+async function startServer(routes: Routes, options: HttpOptions = {}) {
   const github = fakeGitHub({ ...BASE_ROUTES, ...routes });
   const app = createApp({ APP_ID: "1", PRIVATE_KEY: privateKey, WEBHOOK_SECRET: SECRET }, github.Octokit);
-  server = createHttpServer(app);
+  server = createHttpServer(app, options);
   await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
+  return { url: `http://127.0.0.1:${port}`, calls: github.calls };
+}
 
+async function deliver(routes: Routes, payload: object, secret = SECRET) {
+  const { url, calls } = await startServer(routes);
   const body = JSON.stringify(payload);
-  const response = await fetch(`http://127.0.0.1:${port}${WEBHOOK_PATH}`, {
+  const response = await fetch(`${url}${WEBHOOK_PATH}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -98,7 +102,7 @@ async function deliver(routes: Routes, payload: object, secret = SECRET) {
     },
     body,
   });
-  return { status: response.status, calls: github.calls };
+  return { status: response.status, calls };
 }
 
 const routeOf = (call: Call) => `${call.method} ${call.path}`;
@@ -179,5 +183,28 @@ describe("pull_request webhooks", () => {
     const { status, calls } = await deliver({}, pullRequestEvent({}), "not-the-secret");
     expect(status).toBe(400);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("cron endpoint", () => {
+  it("does not exist unless a cron secret is configured", async () => {
+    const { url } = await startServer({});
+    expect((await fetch(`${url}${REMIND_PATH}`)).status).toBe(404);
+  });
+
+  it("rejects requests without the cron secret", async () => {
+    const { url, calls } = await startServer({}, { cronSecret: "cron-secret" });
+    expect((await fetch(`${url}${REMIND_PATH}`)).status).toBe(401);
+    const wrong = await fetch(`${url}${REMIND_PATH}`, { headers: { authorization: "Bearer guess" } });
+    expect(wrong.status).toBe(401);
+    expect(calls).toEqual([]);
+  });
+
+  it("runs reminders across installations when authorized", async () => {
+    const { url, calls } = await startServer({ "GET /app/installations": [200, []] }, { cronSecret: "cron-secret" });
+    const response = await fetch(`${url}${REMIND_PATH}`, { headers: { authorization: "Bearer cron-secret" } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ sent: 0 });
+    expect(calls.map(routeOf)).toEqual(["GET /app/installations"]);
   });
 });
