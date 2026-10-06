@@ -110,4 +110,4 @@ npm run build     # compiles to dist/
 
 ## Support
 
-Questions or bugs: open an issue, or email **support@example.com** <!-- TODO: replace with your support address -->.
+Questions or bugs: open an issue, or email **bjaymakara@gmail.com** <!-- TODO: replace with your support address -->.
