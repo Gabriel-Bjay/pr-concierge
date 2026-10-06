@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { createApp, WEBHOOK_PATH } from "./app.js";
+import { createApp, WEBHOOK_PATH } from "./github-app.js";
 import { createHttpServer } from "./http.js";
 import { remindStaleReviews } from "./reminders.js";
 
@@ -8,7 +8,7 @@ if (existsSync(".env")) process.loadEnvFile(".env");
 const port = Number(process.env.PORT ?? 3000);
 const app = createApp();
 
-createHttpServer(app).listen(port, () => {
+createHttpServer(app, { cronSecret: process.env.CRON_SECRET }).listen(port, () => {
   console.log(`PR Concierge is listening for webhooks on http://localhost:${port}${WEBHOOK_PATH}`);
 });
 

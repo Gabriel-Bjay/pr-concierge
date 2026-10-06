@@ -1,6 +1,6 @@
 // One-shot reminder run for cron jobs or scheduled workflows: `npm run remind`.
 import { existsSync } from "node:fs";
-import { createApp } from "./app.js";
+import { createApp } from "./github-app.js";
 import { remindStaleReviews } from "./reminders.js";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
